@@ -1,16 +1,26 @@
 <?php
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Support\Facades\DB;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 final class NotificationsController
 {
-    public function index(Request $r)
+    public function __construct(
+        private NotificationService $notificationService
+    ) {
+    }
+
+    public function index(Request $request): JsonResponse
     {
-        // поки — найпростіше читання зі своєї таблиці (можна віддати заглушку)
-        $items = DB::table('notification_items')->where('user_id',$r->user()->id)
-            ->orderByDesc('id')->limit(20)->get();
-        return response()->json($items);
+        $notifications = $this->notificationService->getNotificationsForUserAsArray($request->user()->id);
+        return response()->json($notifications);
+    }
+
+    public function news(Request $request): JsonResponse
+    {
+        $news = $this->notificationService->getNews();
+        return response()->json($news);
     }
 }

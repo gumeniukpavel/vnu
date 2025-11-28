@@ -27,7 +27,6 @@
                 <div class="mail-body">
                     <p v-if="mail.bodyPreview" style="white-space:pre-wrap">{{ mail.bodyPreview }}</p>
                     <p v-else class="muted">Без попереднього перегляду.</p>
-                    <!-- Якщо захочеш HTML-вміст листа: окремий ендпоінт /me/messages/{id}?$select=body і рендер із санітизацією -->
                 </div>
 
                 <div v-if="attachments.length" style="margin-top:16px">
@@ -81,14 +80,12 @@ const formatSize = (n) => {
 const load = async () => {
     loading.value = true; error.value=''; mail.value=null; attachments.value=[]
     try {
-        // деталі листа
         const m = await fetch(`/api/ms365/mail/${props.mailId}`, { headers:{Accept:'application/json'}, credentials:'same-origin' })
         if (!m.ok) {
             error.value = `Помилка листа: ${await m.text()}`; return
         }
         mail.value = await m.json()
 
-        // вкладення
         if (mail.value?.hasAttachments) {
             const a = await fetch(`/api/ms365/mail/${props.mailId}/attachments`, { headers:{Accept:'application/json'}, credentials:'same-origin' })
             if (a.ok) {

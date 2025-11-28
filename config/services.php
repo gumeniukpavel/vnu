@@ -41,4 +41,9 @@ return [
         'client_secret' => env('AZURE_CLIENT_SECRET'),
         'redirect'      => env('AZURE_REDIRECT_URI'),
     ],
+
+    'moodle' => [
+        'base_url' => env('MOODLE_BASE_URL'),
+        'token' => env('MOODLE_TOKEN'),
+    ],
 ];

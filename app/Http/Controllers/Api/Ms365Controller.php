@@ -2,184 +2,209 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Support\Facades\Http;
+use App\Services\Ms365Service;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 final class Ms365Controller
 {
-    private function http()
-    {
-        $token = auth()->user()?->azure_access_token;
-        if (!$token) abort(401, 'No access token');
-        return Http::withToken($token)
-            ->acceptJson()
-            ->withHeaders([
-                'ConsistencyLevel' => 'eventual',
-                'Prefer' => 'outlook.timezone="Europe/Kyiv"',
-            ]);
+    public function __construct(
+        private Ms365Service $ms365Service
+    ) {
     }
 
-    public function me()
+    public function me(Request $request): JsonResponse
     {
-        $resp = $this->http()->get('https://graph.microsoft.com/v1.0/me');
-        return response()->json($resp->json(), $resp->status());
-    }
-
-    public function photo()
-    {
-        $resp = $this->http()->get('https://graph.microsoft.com/v1.0/me/photo/$value');
-        if ($resp->successful()) {
-            return response($resp->body(), 200)->header('Content-Type', $resp->header('Content-Type','image/jpeg'));
+        try {
+            $data = $this->ms365Service->getMe($request->user()->id);
+            return response()->json($data);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], $e->getCode() ?: 500);
         }
-        return response('', Response::HTTP_NO_CONTENT);
     }
 
-    public function calendarToday()
+    public function photo(Request $request): Response
     {
-        $start = now()->startOfDay()->toIso8601String();
-        $end   = now()->endOfDay()->toIso8601String();
-
-        $resp = $this->http()->get('https://graph.microsoft.com/v1.0/me/calendarView', [
-            'startDateTime' => $start,
-            'endDateTime'   => $end,
-            '$orderby'      => 'start/dateTime',
-        ]);
-
-        if ($resp->failed()) {
-            return response()->json(['error' => 'calendar', 'details' => $resp->json()], $resp->status());
-        }
-        return response()->json(['data' => $resp->json()['value'] ?? []]);
-    }
-
-    public function mailUnread()
-    {
-        $resp = $this->http()->get('https://graph.microsoft.com/v1.0/me/mailFolders/Inbox', [
-            '$select' => 'unreadItemCount',
-        ]);
-        if ($resp->failed()) return response()->json(['error'=>'mail.unread','details'=>$resp->json()], $resp->status());
-        return response()->json(['unread' => (int)($resp->json()['unreadItemCount'] ?? 0)]);
-    }
-
-    public function mailTop(Request $r)
-    {
-        $take = (int)($r->query('take', 10));
-        $resp = $this->http()->get('https://graph.microsoft.com/v1.0/me/messages', [
-            '$top'     => $take,
-            '$select'  => 'id,subject,from,receivedDateTime,isRead',
-            '$orderby' => 'receivedDateTime DESC',
-        ]);
-        if ($resp->failed()) return response()->json(['error'=>'mail.top','details'=>$resp->json()], $resp->status());
-        return response()->json(['data' => $resp->json()['value'] ?? []]);
-    }
-
-    public function driveRecent()
-    {
-        $resp = $this->http()->get('https://graph.microsoft.com/v1.0/me/drive/recent');
-        if ($resp->failed()) return response()->json(['error'=>'drive.recent','details'=>$resp->json()], $resp->status());
-        return response()->json(['data' => $resp->json()['value'] ?? []]);
-    }
-
-    public function driveItem(string $id)
-    {
-        $resp = $this->http()->get("https://graph.microsoft.com/v1.0/me/drive/items/{$id}", [
-            '$select' => 'id,name,size,lastModifiedDateTime,webUrl,@microsoft.graph.downloadUrl',
-        ]);
-
-        if ($resp->failed()) {
-            return response()->json(['error'=>'drive.item','details'=>$resp->json()], $resp->status());
-        }
-
-        return response()->json($resp->json());
-    }
-
-    public function driveDownload(string $id)
-    {
-        $meta = $this->http()->get("https://graph.microsoft.com/v1.0/me/drive/items/{$id}", [
-            '$select' => 'name,@microsoft.graph.downloadUrl',
-        ]);
-
-        if ($meta->failed()) {
-            return response()->json(['error'=>'drive.download','details'=>$meta->json()], $meta->status());
-        }
-
-        $data = $meta->json();
-        $name = $data['name'] ?? 'file';
-        $url = $data['@microsoft.graph.downloadUrl'] ?? null;
-
-        if (!$url) {
-            return response()->json(['error'=>'no_download_url','message'=>'Файл не має доступного downloadUrl'], 404);
-        }
-
-        $stream = Http::withOptions(['stream' => true])->get($url);
-        return response()->streamDownload(function() use ($stream) {
-            foreach ($stream->body() as $chunk) {
-                echo $chunk;
+        try {
+            $photo = $this->ms365Service->getPhoto($request->user()->id);
+            if ($photo) {
+                return response($photo, 200)->header('Content-Type', 'image/jpeg');
             }
-        }, $name);
+            return response('', Response::HTTP_NO_CONTENT);
+        } catch (\RuntimeException $e) {
+            return response('', Response::HTTP_NO_CONTENT);
+        }
     }
 
-    public function mailShow(string $id)
+    public function calendarToday(Request $request): JsonResponse
     {
-        $resp = $this->http()->get("https://graph.microsoft.com/v1.0/me/messages/{$id}", [
-            '$select' => 'id,subject,from,receivedDateTime,hasAttachments,bodyPreview,importance,isRead,webLink',
-        ]);
-        if ($resp->failed()) {
-            return response()->json(['error'=>'mail.show','details'=>$resp->json()], $resp->status());
+        try {
+            $data = $this->ms365Service->getCalendarToday($request->user()->id);
+            return response()->json(['data' => $data]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => 'calendar', 'details' => $e->getMessage()], $e->getCode() ?: 500);
         }
-        return response()->json($resp->json());
     }
 
-    public function mailAttachments(string $id)
+    public function mailUnread(Request $request): JsonResponse
     {
-        $resp = $this->http()->get("https://graph.microsoft.com/v1.0/me/messages/{$id}/attachments", [
-            '$select' => 'id,name,contentType,size,isInline,@odata.type'
-        ]);
-        if ($resp->failed()) {
-            return response()->json(['error'=>'mail.attachments','details'=>$resp->json()], $resp->status());
+        try {
+            $unread = $this->ms365Service->getMailUnread($request->user()->id);
+            return response()->json(['unread' => $unread]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => 'mail.unread', 'details' => $e->getMessage()], $e->getCode() ?: 500);
         }
-        return response()->json(['data' => $resp->json()['value'] ?? []]);
     }
 
-    public function mailAttachmentDownload(string $id, string $attId)
+    public function mailTop(Request $request): JsonResponse
     {
-        $resp = $this->http()->get("https://graph.microsoft.com/v1.0/me/messages/{$id}/attachments/{$attId}");
-        if ($resp->failed()) {
-            return response()->json(['error'=>'mail.attachment','details'=>$resp->json()], $resp->status());
-        }
-
-        $att = $resp->json();
-
-        $odataType = $att['@odata.type'] ?? '';
-        $name = $att['name'] ?? 'attachment';
-        $ctype = $att['contentType'] ?? 'application/octet-stream';
-
-        if (str_ends_with($odataType, 'fileAttachment') && !empty($att['contentBytes'])) {
-            $binary = base64_decode($att['contentBytes']);
-            return response($binary, 200)
-                ->header('Content-Type', $ctype)
-                ->header('Content-Disposition', 'attachment; filename="'.addslashes($name).'"');
-        }
-
-        if (str_ends_with($odataType, 'referenceAttachment') && !empty($att['contentType'])) {
+        try {
+            $take = (int)($request->query('take', 10));
+            $skip = (int)($request->query('skip', 0));
+            $folder = $request->query('folder', 'Inbox'); // Inbox або SentItems
+            $result = $this->ms365Service->getMailTop($request->user()->id, $take, $folder, $skip);
             return response()->json([
-                'error' => 'reference_attachment',
-                'message' => 'Це referenceAttachment (посилання на хмарний файл). Відкрий лист у webLink або додатково запитуй sourceUrl через beta/розширення.'
-            ], 400);
+                'data' => $result['messages'] ?? [],
+                'total' => $result['total'] ?? null,
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => 'mail.top', 'details' => $e->getMessage()], $e->getCode() ?: 500);
         }
-
-        if (str_ends_with($odataType, 'itemAttachment')) {
-            return response()->json([
-                'error' => 'item_attachment',
-                'message' => 'Це itemAttachment (вкладений лист/подія). Пряме скачування недоступне.'
-            ], 400);
-        }
-
-        return response()->json([
-            'error' => 'unsupported_attachment',
-            'message' => 'Невідомий тип вкладення або відсутні дані.'
-        ], 400);
     }
 
+    public function driveRecent(Request $request): JsonResponse
+    {
+        try {
+            $data = $this->ms365Service->getDriveRecent($request->user()->id);
+            return response()->json(['data' => $data]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => 'drive.recent', 'details' => $e->getMessage()], $e->getCode() ?: 500);
+        }
+    }
 
+    public function driveDownload(Request $request, string $id): Response|JsonResponse
+    {
+        try {
+            $meta = $this->ms365Service->getDriveItem($request->user()->id, $id);
+            $name = $meta['name'] ?? 'file';
+            $url = $this->ms365Service->getDriveDownloadUrl($request->user()->id, $id);
+
+            if ($url) {
+                $stream = \Illuminate\Support\Facades\Http::withOptions(['stream' => true])->get($url);
+                return response()->streamDownload(function () use ($stream) {
+                    foreach ($stream->body() as $chunk) {
+                        echo $chunk;
+                    }
+                }, $name);
+            }
+
+            $content = $this->ms365Service->getDriveItemContent($request->user()->id, $id);
+            if ($content !== null) {
+                $contentType = $meta['file']['mimeType'] ?? 'application/octet-stream';
+                return response($content, 200)
+                    ->header('Content-Type', $contentType)
+                    ->header('Content-Disposition', 'attachment; filename="' . addslashes($name) . '"');
+            }
+
+            if (isset($meta['webUrl'])) {
+                return redirect($meta['webUrl']);
+            }
+
+            return response()->json([
+                'error' => 'no_download_url',
+                'message' => 'Файл не має доступного downloadUrl'
+            ], 404);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => 'drive.download', 'details' => $e->getMessage()], $e->getCode() ?: 500);
+        }
+    }
+
+    public function mailShow(Request $request, string $id): JsonResponse
+    {
+        try {
+            $data = $this->ms365Service->getMailMessage($request->user()->id, $id);
+            return response()->json($data);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => 'mail.show', 'details' => $e->getMessage()], $e->getCode() ?: 500);
+        }
+    }
+
+    public function mailAttachments(Request $request, string $id): JsonResponse
+    {
+        try {
+            $data = $this->ms365Service->getMailAttachments($request->user()->id, $id);
+            return response()->json(['data' => $data]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => 'mail.attachments', 'details' => $e->getMessage()], $e->getCode() ?: 500);
+        }
+    }
+
+    public function mailAttachmentDownload(Request $request, string $id, string $attId): Response|JsonResponse
+    {
+        try {
+            $att = $this->ms365Service->getMailAttachment($request->user()->id, $id, $attId);
+
+            $odataType = $att['@odata.type'] ?? '';
+            $name = $att['name'] ?? 'attachment';
+            $ctype = $att['contentType'] ?? 'application/octet-stream';
+
+            if (str_ends_with($odataType, 'fileAttachment') && !empty($att['contentBytes'])) {
+                $binary = base64_decode($att['contentBytes']);
+                return response($binary, 200)
+                    ->header('Content-Type', $ctype)
+                    ->header('Content-Disposition', 'attachment; filename="' . addslashes($name) . '"');
+            }
+
+            if (str_ends_with($odataType, 'referenceAttachment') && !empty($att['contentType'])) {
+                return response()->json([
+                    'error' => 'reference_attachment',
+                    'message' => 'Це referenceAttachment (посилання на хмарний файл). Відкрий лист у webLink або додатково запитуй sourceUrl через beta/розширення.'
+                ], 400);
+            }
+
+            if (str_ends_with($odataType, 'itemAttachment')) {
+                return response()->json([
+                    'error' => 'item_attachment',
+                    'message' => 'Це itemAttachment (вкладений лист/подія). Пряме скачування недоступне.'
+                ], 400);
+            }
+
+            return response()->json([
+                'error' => 'unsupported_attachment',
+                'message' => 'Невідомий тип вкладення або відсутні дані.'
+            ], 400);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => 'mail.attachment', 'details' => $e->getMessage()], $e->getCode() ?: 500);
+        }
+    }
+
+    public function mailReply(Request $request, string $id): JsonResponse
+    {
+        try {
+            $request->validate([
+                'body' => 'required|string',
+                'subject' => 'nullable|string|max:255',
+            ]);
+
+            $this->ms365Service->sendMailReply(
+                $request->user()->id,
+                $id,
+                $request->input('body'),
+                $request->input('subject')
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Відповідь успішно відправлено'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => 'mail.reply', 'details' => $e->getMessage()], $e->getCode() ?: 500);
+        }
+    }
 }

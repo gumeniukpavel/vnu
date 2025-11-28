@@ -8,5 +8,4 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-    // базовий passthrough, пізніше зробимо кешування розкладу
 });

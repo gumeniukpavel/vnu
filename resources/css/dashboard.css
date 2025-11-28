@@ -33,15 +33,45 @@ body {
     background:
         radial-gradient(1200px 400px at 10% -20%, rgba(14,165,233,.18), transparent 60%),
         radial-gradient(800px 300px at 90% -10%, rgba(99,102,241,.20), transparent 60%);
-    padding: 24px;
+    padding: 16px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Адаптивні контейнери */
+@media (min-width: 768px) {
+    .container {
+        padding: 24px;
+        max-width: 768px;
+        margin: 0 auto;
+    }
+}
+
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1200px;
+        padding: 32px;
+    }
 }
 
 .topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    max-width: 1100px;
-    margin: 0 auto 18px;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 18px;
+}
+
+@media (min-width: 768px) {
+    .topbar {
+        max-width: 1100px;
+        margin-left: auto;
+        margin-right: auto;
+        flex-wrap: nowrap;
+    }
 }
 
 .brand {
@@ -78,6 +108,14 @@ body {
     display: flex;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+    .auth-buttons {
+        width: 100%;
+        justify-content: flex-end;
+    }
 }
 
 /* ===== Buttons ===== */
@@ -113,32 +151,147 @@ body {
     color: var(--ink);
 }
 
+/* ===== Tabs ===== */
+.tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 12px 0 16px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 4px;
+}
+
+.tabs::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tabs::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+    background: var(--ring, #e2e8f0);
+    border-radius: 2px;
+}
+
+.tab {
+    padding: 8px 12px;
+    border: 1px solid var(--border, #3a3a3a);
+    background: var(--tab-bg, transparent);
+    color: var(--tab-fg, inherit);
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .02s ease;
+    outline: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.tab--active {
+    background: var(--tab-active-bg, rgba(100,150,250,.18));
+    border-color: rgba(100,150,250,.5);
+    color: var(--tab-active-fg, #fff);
+}
+
+.tab:hover {
+    background: rgba(255,255,255,.06);
+    border-color: var(--border, #4a4a4a);
+}
+
+.tab:active {
+    transform: translateY(1px);
+}
+
+.tab:focus-visible {
+    box-shadow: 0 0 0 2px rgba(100,150,250,.5);
+}
+
+/* На мобільних таби можуть бути липкими */
+@media (max-width: 720px) {
+    .tabs {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--bg, #f8fafc);
+        padding-top: 8px;
+        margin-top: 0;
+    }
+    
+    [data-theme="dark"] .tabs {
+        background: var(--bg, #0f172a);
+    }
+}
+
 /* ===== Grid ===== */
 .grid {
-    max-width: 1100px;
+    width: 100%;
+    max-width: 100%;
     margin: 0 auto;
     display: grid;
     gap: 16px;
-    grid-template-columns: repeat(12, 1fr);
+    grid-template-columns: 1fr;
+    box-sizing: border-box;
+}
+
+/* Адаптивна сітка для карток */
+@media (min-width: 576px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+@media (min-width: 768px) {
+    .grid {
+        max-width: 1100px;
+        gap: 24px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 1200px;
+    }
 }
 
 .card {
-    grid-column: span 6;
+    grid-column: span 1;
     background: var(--card);
     border: 1px solid var(--ring);
     border-radius: 18px;
     box-shadow: 0 8px 24px rgba(2,6,23,.05);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Дозволяє flex-item скорочуватись */
 }
 
 .card--wide {
-    grid-column: span 12;
+    grid-column: 1 / -1; /* Займає всі колонки */
+    width: 100%;
+    max-width: 100%;
 }
 
-@media (max-width: 900px) {
+/* На мобільних всі картки на всю ширину */
+@media (max-width: 575px) {
     .card, .card--wide {
-        grid-column: span 12;
+        grid-column: span 1;
     }
+}
+
+/* Сторінка листа завжди на всю ширину, навіть в grid */
+.mail-view-container .card--wide {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
 }
 
 .card__head {
@@ -147,6 +300,14 @@ body {
     justify-content: space-between;
     padding: 14px 16px;
     border-bottom: 1px solid var(--ring);
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+@media (max-width: 575px) {
+    .card__head {
+        padding: 12px;
+    }
 }
 
 .card__head h2 {
@@ -157,6 +318,17 @@ body {
 
 .card__body {
     padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+@media (max-width: 575px) {
+    .card__body {
+        padding: 12px;
+    }
 }
 
 /* ===== Profile ===== */
@@ -197,6 +369,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    width: 100%;
+    overflow: visible;
 }
 
 .list__item {
@@ -208,6 +382,32 @@ body {
     border-radius: 12px;
     padding: 10px 12px;
     background: var(--card);
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.list__item--clickable {
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    cursor: pointer;
+}
+
+.list__item--clickable:hover {
+    background-color: var(--bg);
+    transform: translateX(2px);
+    border-color: var(--brand);
+}
+
+.list__item--clickable:active {
+    transform: translateX(0);
+    background-color: var(--ring);
+}
+
+@media (max-width: 575px) {
+    .list__item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
 }
 
 .badge {
@@ -237,10 +437,60 @@ body {
     color: #854d0e;
 }
 
+.badge--danger {
+    background: #fef2f2;
+    color: #991b1b;
+    font-weight: 600;
+}
+
+/* Прострочені дедлайни */
+.assignment--overdue {
+    border-left: 4px solid #dc2626;
+    background-color: rgba(220, 38, 38, 0.05);
+}
+
+.assignment-title--overdue {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.assignment-due--overdue {
+    color: #dc2626 !important;
+    font-weight: 500;
+}
+
+[data-theme="dark"] .assignment--overdue {
+    background-color: rgba(220, 38, 38, 0.15);
+    border-left-color: #ef4444;
+}
+
+[data-theme="dark"] .assignment-title--overdue {
+    color: #ef4444;
+}
+
+[data-theme="dark"] .assignment-due--overdue {
+    color: #ef4444 !important;
+}
+
+[data-theme="dark"] .badge--danger {
+    background: rgba(220, 38, 38, 0.2);
+    color: #fca5a5;
+}
+
 .ellipsis {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
+}
+
+/* На мобільних дозволяємо переносити текст */
+@media (max-width: 575px) {
+    .ellipsis {
+        white-space: normal;
+        word-break: break-word;
+    }
 }
 
 /* ===== Timeline ===== */
@@ -286,10 +536,37 @@ body {
 .row {
     display: flex;
     gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.row.spread {
+    justify-content: space-between;
+}
+
+@media (max-width: 575px) {
+    .row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .row.spread {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }
 
 .when {
     min-width: 120px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 575px) {
+    .when {
+        min-width: auto;
+        width: 100%;
+    }
 }
 
 .time {
@@ -326,17 +603,367 @@ body {
 .empty {
     color: var(--muted);
     padding: 8px 2px;
+    text-align: center;
 }
 
+.placeholder-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+    min-height: 300px;
+}
+
+.placeholder-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.6;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.placeholder-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 12px 0;
+}
+
+.placeholder-description {
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 500px;
+    margin: 0;
+}
+
+[data-theme="dark"] .placeholder-icon {
+    opacity: 0.7;
+}
+
+/* ===== Utility Classes ===== */
+/* Відступи */
+.mb-3 { margin-bottom: 12px !important; }
+.mb-4 { margin-bottom: 16px !important; }
+.mt-3 { margin-top: 12px !important; }
+.mt-4 { margin-top: 16px !important; }
+
+/* Вирівнювання тексту */
+.text-center { text-align: center !important; }
+.text-left { text-align: left !important; }
+.text-right { text-align: right !important; }
+
+/* Flex utilities */
+.d-flex { display: flex !important; }
+.flex-column { flex-direction: column !important; }
+.flex-wrap { flex-wrap: wrap !important; }
+.align-items-center { align-items: center !important; }
+.justify-content-between { justify-content: space-between !important; }
+.justify-content-center { justify-content: center !important; }
+
+/* Висота */
+.h-100 { height: 100% !important; }
+.min-h-100 { min-height: 100% !important; }
+
+/* Overflow */
+.overflow-auto { overflow: auto !important; }
+.overflow-hidden { overflow: hidden !important; }
+
+/* Width */
+.w-100 { width: 100% !important; }
+
+/* Object fit для зображень */
+.object-fit-cover {
+    object-fit: cover !important;
+    object-position: center !important;
+}
+
+/* Line clamp для обрізання тексту */
+.line-clamp-2 {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.line-clamp-3 {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Фіксована висота для прев'ю зображень у картках */
+.img-preview-container {
+    height: 200px;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg);
+}
+
+.img-preview-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* Таблиці - адаптивність */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+    .table-wrapper {
+        margin: 0 -16px;
+        padding: 0 16px;
+    }
+}
+
+/* Стилі для карток з однаковою висотою */
+.card-equal-height {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.card-equal-height .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Виправлення для прев'ю зображень Moodle */
+.moodle-card-cover {
+    height: 200px;
+    object-fit: cover;
+    object-position: center;
+    width: 100%;
+}
+
+/* Запобігання горизонтальному скролу */
+body {
+    overflow-x: hidden;
+    max-width: 100vw;
+}
+
+/* Покращення верстки для всіх табів */
+.unauth {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* Мобільні виправлення */
+@media (max-width: 575px) {
+    /* Зменшуємо відступи на мобільних */
+    .container {
+        padding: 12px;
+    }
+    
+    /* Зменшуємо розміри шрифтів */
+    .card__head h2 {
+        font-size: 14px;
+    }
+    
+    /* Кнопки на всю ширину на мобільних */
+    .btn-mobile-full {
+        width: 100%;
+    }
+    
+    /* Зменшуємо розміри заголовків */
+    h1 {
+        font-size: 20px;
+    }
+    
+    h2 {
+        font-size: 18px;
+    }
+}
+
+/* Покращення відображення карток на мобільних */
+@media (max-width: 575px) {
+    .card__body {
+        font-size: 14px;
+    }
+    
+    .list__item {
+        font-size: 14px;
+    }
+}
+
+/* Вирівнювання контенту в секціях */
+section.grid {
+    width: 100%;
+}
+
+/* Контейнер для курсів має бути на всю ширину */
+section.grid > .moodle-courses-grid,
+section.grid > .vnu-moodle-grid {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Сторінка листа завжди на всю ширину */
+.mail-view-container {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
+}
+
+.mail-view-page {
+    width: 100%;
+    max-width: 100%;
+}
+
+@media (min-width: 768px) {
+    .mail-view-container {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+    
+    .mail-view-page {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+}
+
+@media (min-width: 1200px) {
+    .mail-view-container {
+        max-width: 1200px;
+    }
+    
+    .mail-view-page {
+        max-width: 1200px;
+    }
+}
+
+/* Покращення відображення timeline на мобільних */
+@media (max-width: 575px) {
+    .timeline__item {
+        grid-template-columns: 16px 1fr;
+        gap: 8px;
+    }
+    
+    .when {
+        min-width: auto;
+    }
+    
+    .time {
+        font-size: 14px;
+    }
+    
+    .what .title {
+        font-size: 14px;
+    }
+}
+
+/* Стилі для акордеону розкладу */
+.schedule-day {
+    margin-bottom: 1rem;
+    border: 1px solid var(--border, #e0e0e0);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--card);
+}
+
+.schedule-day:last-child {
+    margin-bottom: 0;
+}
+
+.schedule-accordion {
+    display: flex;
+    flex-direction: column;
+}
+
+.schedule-day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.2s ease;
+    gap: 12px;
+}
+
+.schedule-day-header:hover {
+    background-color: var(--bg, #f5f5f5);
+}
+
+.schedule-day-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.schedule-day-count {
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 0.9em;
+}
+
+.schedule-accordion-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    font-size: 0.8em;
+    color: var(--muted);
+    user-select: none;
+}
+
+.schedule-accordion-icon--open {
+    transform: rotate(180deg);
+}
+
+.schedule-day-content {
+    max-height: 2000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+    opacity: 1;
+    padding: 0 16px 16px 16px;
+}
+
+.schedule-day-content--collapsed {
+    max-height: 0;
+    padding: 0 16px;
+    opacity: 0;
+}
+
+/* Змінні для тем */
 :root[data-theme="light"]{
     --border: #d0d0d0;
+    --tab-bg: transparent;
+    --tab-fg: #0f172a;
     --tab-active-bg: rgba(30, 80, 180, .12);
     --tab-active-fg: #0b1641;
     --card-bg: #ffffff;
     --logo-bg: #2a5bd7;
 }
-:root[data-theme="dark"]{
+:root[data-theme="dark"],
+[data-theme="dark"]{
     --border: #2f2f2f;
+    --tab-bg: transparent;
+    --tab-fg: #f8fafc;
     --tab-active-bg: rgba(100,150,250,.18);
     --tab-active-fg: #ffffff;
     --card-bg: rgba(255,255,255,.03);
